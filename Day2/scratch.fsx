@@ -1,4 +1,4 @@
-﻿open System.IO
+open System.IO
 
 type Color = Red | Green | Blue
 
@@ -8,9 +8,9 @@ type ColorNumber = {
 }
 
 type Hand = {
-    Blue: int
-    Green: int
-    Red: int
+    Blue: int option
+    Green: int option
+    Red: int option
 }
 
 type Game = {
@@ -29,6 +29,8 @@ let parseLine (line:string) =
     /// </summary>
     /// <param name="text">The string to parse</param>
     let parseHand (text:string) : Hand =
+        let hand = { Blue = None; Green = None; Red = None }
+        
         /// <summary>
         /// Parses a color from a string
         ///
@@ -50,37 +52,37 @@ let parseLine (line:string) =
             |> Array.fold (fun hand colorNumber ->
                 match colorNumber.color with
                 | Red ->
-                    match colorNumber.number with
-                    | x when x > hand.Red -> { hand with Red = colorNumber.number }
+                    match hand.Red with
+                    | Some x when x > colorNumber.number -> { hand with Red = Some colorNumber.number }
                     | _ -> hand
                 | Green ->
-                    match colorNumber.number with
-                    | x when x > hand.Green -> { hand with Green = colorNumber.number }
+                    match hand.Green with
+                    | Some x when x > colorNumber.number -> { hand with Green = Some colorNumber.number }
                     | _ -> hand
                 | Blue ->
-                    match colorNumber.number with
-                    | x when x > hand.Blue -> { hand with Blue = colorNumber.number }
+                    match hand.Blue with
+                    | Some x when x > colorNumber.number -> { hand with Blue = Some colorNumber.number }
                     | _ -> hand
-            ) { Blue = 0; Green = 0; Red = 0 }
+            ) hand
             
     let parts = line.Split(": ")
-    let gameId : int = parts.[0].Split(" ")[1] |> int
+    let game = parts.[0].Split(" ")[1] |> int
     parts.[1].Split("; ")
                |> Array.map parseHand
                // add the highest of red, green, and blue colors to the game object
                |> Array.fold (fun game hand ->
                     // highest red so far
                     let red = match hand.Red with
-                              | x when x > game.Red -> x
+                              | Some x when x > game.Red -> x
                               | _ -> game.Red
                     let green = match hand.Green with
-                                | x when x > game.Green -> x
+                                | Some x when x > game.Green -> x
                                 | _ -> game.Green
                     let blue = match hand.Blue with
-                                 | x when x > game.Blue -> x
+                                 | Some x when x > game.Blue -> x
                                  | _ -> game.Blue
                     { game with Blue = blue; Green = green; Red = red }
-               ) { id = gameId; Blue = 0; Green = 0; Red = 0 }
+               ) { id = game; Blue = 0; Green = 0; Red = 0 }
     
 let isPossible (game:Game) =
     let blue = 14
@@ -89,12 +91,10 @@ let isPossible (game:Game) =
     game.Blue <= blue && game.Red <= red && game.Green <= green
     
 let findAnswer (file:string)=
-    let lines = File.ReadLines($"{file}.txt")
+    let lines = File.ReadLines($"Day2/{file}.txt")
     lines
     |> Seq.map parseLine
-    // |> Seq.filter isPossible // part 1
-    |> Seq.map (fun x ->
-        x.Blue * x.Green * x.Red) // part 2
-    |> Seq.sum
+    |> Seq.filter isPossible
+    |> Seq.fold (fun acc game -> acc + game.id) 0
     
-findAnswer "input" |> printfn "%A"
+findAnswer "sample" |> printfn "%A"
